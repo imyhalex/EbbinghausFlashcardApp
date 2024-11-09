@@ -1,10 +1,13 @@
 ﻿using System.ComponentModel.DataAnnotations.Schema;
+using System.ComponentModel.DataAnnotations;
 
 namespace EbbinghausFlashcardApp.Models
 {
     public class FlashcardSet
     {
         public int Id { get; set; }
+
+        [Required]
         public string Name { get; set; }
         public string Description { get; set; }
         public DateTime CreatedDate { get; set; }
@@ -13,6 +16,7 @@ namespace EbbinghausFlashcardApp.Models
         public string ImagePath { get; set; } // Path to the uploaded image
 
         [ForeignKey("User")]
+        [Required]
         public string UserId { get; set; }
         public User User { get; set; }
         // Navigation property

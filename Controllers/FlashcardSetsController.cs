@@ -3,25 +3,29 @@ using EbbinghausFlashcardApp.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System.Reflection.Metadata.Ecma335;
 /*
- * Acknoledgement: 
+ * Acknoledgement: this code follows the Microsoft tutorials or documentations below
  * @reference: https://learn.microsoft.com/en-us/aspnet/core/tutorials/first-mvc-app/adding-controller?view=aspnetcore-8.0&tabs=visual-studio
  * @reference: https://learn.microsoft.com/en-us/aspnet/core/security/authorization/introduction?view=aspnetcore-8.0
  * @reference: https://stackoverflow.com/questions/57432387/understanding-task-vs-taskt-as-a-return-type
  * @reference: https://learn.microsoft.com/en-us/aspnet/core/tutorials/first-web-api?view=aspnetcore-8.0&tabs=visual-studio
+ * @reference: https://learn.microsoft.com/en-us/aspnet/core/tutorials/first-web-api?view=aspnetcore-8.0&tabs=visual-studio
  * @reference: https://learn.microsoft.com/en-us/dotnet/api/system.datetime.utcnow?view=net-8.0
+ * @reference: https://learn.microsoft.com/en-us/dotnet/api/microsoft.aspnetcore.hosting.iwebhostenvironment?view=aspnetcore-8.0
  */
 namespace EbbinghausFlashcardApp.Controllers
 {
     [Authorize]
-    [Route("[controller]/[action]")]
     public class FlashcardSetsController : Controller
     {
         private readonly ApplicationDbContext _context;
+        private readonly IWebHostEnvironment _environment;
 
-        public FlashcardSetsController(ApplicationDbContext context)
+        public FlashcardSetsController(ApplicationDbContext context, IWebHostEnvironment environment)
         {
             _context = context;
+            _environment = environment;
         }
 
         // display flashcardsets in the at FalshcardSets/Index
@@ -29,7 +33,8 @@ namespace EbbinghausFlashcardApp.Controllers
         public async Task<IActionResult> Index()
         {
             var UserId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier).Value;
-            var flashcardSets = await _context.FlashcardSets.Where(f => f.UserId == UserId).ToListAsync();
+            var flashcardSets = await _context.FlashcardSets
+                .Where(f => f.UserId == UserId).Include(f => f.Flashcards).ToListAsync();
             return View(flashcardSets);
         }
 
@@ -45,39 +50,53 @@ namespace EbbinghausFlashcardApp.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create(FlashcardSet flashcardSet, IFormFile imageFile)
         {
-            if (ModelState.IsValid)
+            // debug
+            Console.WriteLine("Create POST action set");
+            Console.WriteLine($"flashcardSet: {flashcardSet?.Name}");
+            Console.WriteLine($"FlashcardSet Description: {flashcardSet?.Description}");
+            Console.WriteLine($"Image File Present: {imageFile != null}");
+            Console.WriteLine($"Flashcards Count: {flashcardSet?.Flashcards?.Count ?? 0}");
+            try
             {
-                // optional image for set
-                if (imageFile != null && imageFile.Length > 0)
+                if (ModelState.IsValid)
                 {
-                    var uploadFolder = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot/images");
-                    var filePath = Path.Combine(uploadFolder, imageFile.FileName);
-                    using (var stream = new FileStream(filePath, FileMode.Create))
+                    if (imageFile != null && imageFile.Length > 0)
                     {
-                        await imageFile.CopyToAsync(stream);
+                        var uploadFolder = Path.Combine(_environment.WebRootPath, "images");
+                        if (!Directory.Exists(uploadFolder))
+                            Directory.CreateDirectory(uploadFolder);
+                        var fileName = Guid.NewGuid().ToString() + Path.GetExtension(imageFile.FileName);
+                        var filePath = Path.Combine(uploadFolder, fileName);
+                        using (var stream = new FileStream(filePath, FileMode.Create))
+                        {
+                            await imageFile.CopyToAsync(stream);
+                        }
+                        flashcardSet.ImagePath = "/images/" + fileName;
                     }
-                    flashcardSet.ImagePath = "/images/" + imageFile.FileName;
+                    // set the user id and dates
+                    flashcardSet.UserId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier).Value;
+                    flashcardSet.CreatedDate = DateTime.UtcNow;
+                    flashcardSet.ReviewInterval = -1;
+                    flashcardSet.NextReviewDate = DateTime.UtcNow;
+
+                    // if flashcard collection is null, initialize it
+                    if (flashcardSet.Flashcards == null)
+                        flashcardSet.Flashcards = new List<Flashcard>();
+
+                    // add flashcard set to the database
+                    await _context.FlashcardSets.AddAsync(flashcardSet);
+                    await _context.SaveChangesAsync();
+                    return RedirectToAction(nameof(Index));
                 }
-
-                flashcardSet.UserId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier).Value;
-                flashcardSet.CreatedDate = DateTime.UtcNow;
-                // once created, the flashcard set will be marked as not reviewed
-                flashcardSet.ReviewInterval = -1;
-                flashcardSet.NextReviewDate = DateTime.UtcNow;
-
-                if (flashcardSet.Flashcards == null)
-                {
-                    flashcardSet.Flashcards = new List<Flashcard>();
-                }
-
-                _context.Add(flashcardSet);
-                await _context.SaveChangesAsync();
-                return RedirectToAction(nameof(Index));
+                return View(flashcardSet);
             }
-            return View(flashcardSet);
+            catch (Exception e)
+            {
+                ModelState.AddModelError("", "Error: " + e.Message);
+                return View(flashcardSet);
+            }
         }
 
-        [HttpGet("{id}")]
         public async Task<IActionResult> Details(int id)
         {
             var flashcardSet = await _context.FlashcardSets
@@ -88,7 +107,6 @@ namespace EbbinghausFlashcardApp.Controllers
         }
 
         // method to edit exsiting flashcard set (GET)
-        [HttpGet("{id}")]
         public async Task<IActionResult> Edit(int id)
         {
             var flashcarSet = await _context.FlashcardSets
@@ -99,7 +117,7 @@ namespace EbbinghausFlashcardApp.Controllers
         }
 
         // method to edit existing flashcar set (POST) - from "The PutTodoItem method" in mircosoft tutorial
-        [HttpPost("{id}")]
+        [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Edit(int id, FlashcardSet flashcardSet)
         {
@@ -109,8 +127,7 @@ namespace EbbinghausFlashcardApp.Controllers
             {
                 try
                 {
-                    _context.Attach(flashcardSet);
-                    _context.Entry(flashcardSet).State = EntityState.Modified;
+                    _context.Update(flashcardSet);
 
                     // if new flashcard have been createdm save changes to the database
                     foreach (var flashcard in flashcardSet.Flashcards)
@@ -130,8 +147,7 @@ namespace EbbinghausFlashcardApp.Controllers
                 {
                     if (!FlashcardSetExists(id))
                         return NotFound();
-                    else
-                        throw;
+                    throw;
                 }
             }
             return View(flashcardSet);

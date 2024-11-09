@@ -12,7 +12,7 @@
     <div>
         <div class="form-floating mb-3">
             <input asp-for="Name" class="form-control" placeholder="Flashcard Set Name" />
-            <label asp-for="Name">Enter a set "</label>
+            <label asp-for="Name">Enter a set name here</label>
             <span asp-validation-for="Name" class="text-danger"></span>
         </div>
     </div>
@@ -40,6 +40,19 @@
 @section Scripts {
     <script>
         let flashcardIndex = 0;
+
+        /**
+         * How to submit a form using javascript?
+         * reference: https://www.freecodecamp.org/news/how-to-submit-a-form-with-javascript/
+         */
+        document.querySelector('form').addEventListener('submit', function (e) {
+            console.log('Form submitted');
+
+            const formData = new FormData(this);
+            for (let pari of formData.entries()) {
+                console.log(pair[0] + ': ' + pair[1]);
+            }
+        });
 
         function addFlashcard() {
             const flashcardList = document.getElementById('flashcards-list');
