@@ -1,0 +1,22 @@
+﻿@model EbbinghausFlashcardApp.Models.FlashcardSet
+
+@{
+    ViewData["Title"] = "Flashcard Set Details";
+}
+
+<h2>@Model.Name</h2>
+<p>@Model.Description</p>
+
+<h3>Flashcards</h3>
+<div class="list-group">
+    @foreach (var flashcard in Model.Flashcards)
+    {
+        <div class="list-group-item">
+            <strong>Term:</strong> @flashcard.Term
+            <p><strong>Definition:</strong> @flashcard.Definition</p>
+        </div>
+    }
+</div>
+
+<a href="@Url.Action("Review", "Review", new { flashcardSetId = Model.Id })" class="btn btn-primary mt-3">Start Review</a>
+

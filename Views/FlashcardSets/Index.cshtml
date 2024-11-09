@@ -1,0 +1,39 @@
+﻿@model IEnumerable<EbbinghausFlashcardApp.Models.FlashcardSet>
+
+@{
+    ViewData["Title"] = "Flashcard Sets";
+}
+
+<h2>@ViewData["Title"]</h2>
+
+<div class="mb-4">
+    <a asp-controller="FlashcardSets" asp-action="Create" class="btn btn-primary">Create New Flashcard Set</a>
+</div>
+
+<div class="list-group">
+    @if (Model != null && Model.Any())
+    {
+        @foreach (var set in Model)
+        {
+            <a href="@Url.Action("Details", "FlashcardSets", new { id = set.Id })" class="list-group-item list-group-item-action">
+                <div class="d-flex w-100 justify-content-between">
+                    <h5 class="mb-1">@set.Name</h5>
+                    <small>@set.CreatedDate.ToShortDateString()</small>
+                </div>
+                <p class="mb-1">@set.Description</p>
+                @if (!string.IsNullOrEmpty(set.ImagePath))
+                {
+                    <img src="@set.ImagePath" alt="Image for @set.Name" class="img-thumbnail" style="max-width: 150px; max-height: 150px;" />
+                }
+            </a>
+        }
+    }
+    else
+    {
+        <div class="alert alert-info" role="alert">
+            No flashcard sets found. Click the "Create New Flashcard Set" button to add a new set.
+        </div>
+    }
+</div>
+
+

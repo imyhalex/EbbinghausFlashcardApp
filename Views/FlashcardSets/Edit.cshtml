@@ -1,0 +1,87 @@
+﻿@model EbbinghausFlashcardApp.Models.FlashcardSet
+
+@{
+    ViewData["Title"] = "Edit Flashcard Set";
+}
+
+<h2>@ViewData["Title"]</h2>
+
+<!-- Flashcard Set Edit Section -->
+<form asp-action="Edit" method="post" enctype="multipart/form-data">
+    <input type="hidden" asp-for="Id" />
+    <div class="form-floating mb-3">
+        <input asp-for="Name" class="form-control" placeholder="Flashcard Set Title" />
+        <label asp-for="Name">Flashcard Set Title</label>
+        <span asp-validation-for="Name" class="text-danger"></span>
+    </div>
+
+    <div class="form-floating mb-3">
+        <textarea asp-for="Description" class="form-control" placeholder="Add a description..."></textarea>
+        <label asp-for="Description">Add a description...</label>
+        <span asp-validation-for="Description" class="text-danger"></span>
+    </div>
+
+    <div class="mb-3">
+        <label for="imageFile" class="form-label">Upload Image (Optional)</label>
+        <input type="file" name="imageFile" class="form-control" />
+        @if (!string.IsNullOrEmpty(Model.ImagePath))
+        {
+            <p>Current Image:</p>
+            <img src="@Model.ImagePath" alt="Current Image" class="img-fluid" style="max-height: 150px;" />
+        }
+    </div>
+
+    <!-- Flashcard Edit Section -->
+    <div id="flashcards-list">
+        <h3>Flashcards</h3>
+        @for (int i = 0; i < Model.Flashcards.Count; i++)
+        {
+            var flashcard = Model.Flashcards.ElementAt(i);
+            <div class="flashcard-item mb-3" data-index="@i">
+                <input type="hidden" asp-for="@flashcard.Id" />
+                <div class="form-floating">
+                    <input asp-for="@flashcard.Term" class="form-control" placeholder="Enter term" />
+                    <label asp-for="@flashcard.Term">Enter term</label>
+                </div>
+                <div class="form-floating mt-2">
+                    <input asp-for="@flashcard.Definition" class="form-control" placeholder="Enter definition" />
+                    <label asp-for="@flashcard.Definition">Enter definition</label>
+                </div>
+                <button type="button" class="btn btn-danger mt-2" onclick="removeFlashcard(this)">Remove Card</button>
+            </div>
+        }
+    </div>
+    <button type="button" class="btn btn-outline-primary mt-3" onclick="addFlashcard()">Add a Card</button>
+
+    <!-- Save Changes Button -->
+    <button type="submit" class="btn btn-primary mt-3">Save Changes</button>
+</form>
+
+@section Scripts {
+    <script>
+        let flashcardIndex = @Model.Flashcards.Count;
+
+        function addFlashcard() {
+            const flashcardList = document.getElementById('flashcards-list');
+            const newFlashcard = `
+                <div class="flashcard-item mb-3" data-index="${flashcardIndex}">
+                    <input type="hidden" name="Flashcards[${flashcardIndex}].Id" value="0" />
+                    <div class="form-floating">
+                        <input class="form-control" name="Flashcards[${flashcardIndex}].Term" placeholder="Enter term" />
+                        <label>Enter term</label>
+                    </div>
+                    <div class="form-floating mt-2">
+                        <input class="form-control" name="Flashcards[${flashcardIndex}].Definition" placeholder="Enter definition" />
+                        <label>Enter definition</label>
+                    </div>
+                    <button type="button" class="btn btn-danger mt-2" onclick="removeFlashcard(this)">Remove Card</button>
+                </div>`;
+            flashcardList.insertAdjacentHTML('beforeend', newFlashcard);
+            flashcardIndex++;
+        }
+
+        function removeFlashcard(button) {
+            button.parentElement.remove();
+        }
+    </script>
+}

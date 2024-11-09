@@ -1,0 +1,66 @@
+﻿@model EbbinghausFlashcardApp.Models.FlashcardSet
+@{
+    ViewData["Title"] = "Create Flashcard Set";
+}
+
+<h2>@ViewData["Title"]</h2>
+
+@Html.ValidationSummary(true, "", new { @class = "text-danger" })
+
+<form asp-action="Create" method="post" enctype="multipart/form-data">
+    @Html.AntiForgeryToken()
+    <div>
+        <div class="form-floating mb-3">
+            <input asp-for="Name" class="form-control" placeholder="Flashcard Set Name" />
+            <label asp-for="Name">Enter a set "</label>
+            <span asp-validation-for="Name" class="text-danger"></span>
+        </div>
+    </div>
+    <div class="form-floating mb-3">
+        <input asp-for="Description" class="form-control" placeholder="Add a description..." />
+        <label asp-for="Description">Add a description...</label>
+        <span asp-validation-for="Description" class="text-danger"></span>
+    </div>
+    <div class="mb-3">
+        <label for="imageFile" class="form-label">Upload Image (Optional)</label>
+        <input type="file" name="imageFile" class="form-control" />
+    </div>
+    <div id="flashcard-container">
+        <h3>Flashcards</h3>
+        <div class="flashcard-form">
+            <div id="flashcards-list">
+                <!-- Flashcard input fields go here -->
+            </div>
+            <button type="button" class="btn btn-outline-primary mt-3" onclick="addFlashcard()">Add a Card</button>
+        </div>
+    </div>
+    <button type="submit" class="btn btn-primary mt-3">Save Flashcard Set</button>
+</form>
+
+@section Scripts {
+    <script>
+        let flashcardIndex = 0;
+
+        function addFlashcard() {
+            const flashcardList = document.getElementById('flashcards-list');
+            const newFlashcard = `
+                        <div class="flashcard-item mb-3" data-index="${flashcardIndex}">
+                            <div class="form-floating">
+                                <input class="form-control" name="Flashcards[${flashcardIndex}].Term" placeholder="Enter term" />
+                                <label>Enter term</label>
+                            </div>
+                            <div class="form-floating mt-2">
+                                <input class="form-control" name="Flashcards[${flashcardIndex}].Definition" placeholder="Enter definition" />
+                                <label>Enter definition</label>
+                            </div>
+                            <button type="button" class="btn btn-danger mt-2" onclick="removeFlashcard(this)">Remove Card</button>
+                        </div>`;
+            flashcardList.insertAdjacentHTML('beforeend', newFlashcard);
+            flashcardIndex++;
+        }
+
+        function removeFlashcard(button) {
+            button.parentElement.remove();
+        }
+    </script>
+}
