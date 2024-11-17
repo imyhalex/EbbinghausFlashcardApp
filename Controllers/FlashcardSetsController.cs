@@ -13,6 +13,7 @@ using System.Reflection.Metadata.Ecma335;
  * @reference: https://learn.microsoft.com/en-us/aspnet/core/tutorials/first-web-api?view=aspnetcore-8.0&tabs=visual-studio
  * @reference: https://learn.microsoft.com/en-us/dotnet/api/system.datetime.utcnow?view=net-8.0
  * @reference: https://learn.microsoft.com/en-us/dotnet/api/microsoft.aspnetcore.hosting.iwebhostenvironment?view=aspnetcore-8.0
+ * @reference: https://learn.microsoft.com/en-us/dotnet/api/system.linq.enumerable.any?view=net-8.0
  */
 namespace EbbinghausFlashcardApp.Controllers
 {
@@ -50,49 +51,42 @@ namespace EbbinghausFlashcardApp.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create(FlashcardSet flashcardSet, IFormFile imageFile)
         {
-            // debug
-            Console.WriteLine("Create POST action set");
-            Console.WriteLine($"flashcardSet: {flashcardSet?.Name}");
-            Console.WriteLine($"FlashcardSet Description: {flashcardSet?.Description}");
-            Console.WriteLine($"Image File Present: {imageFile != null}");
-            Console.WriteLine($"Flashcards Count: {flashcardSet?.Flashcards?.Count ?? 0}");
             try
             {
-                if (ModelState.IsValid)
+                if (imageFile != null && imageFile.Length > 0)
                 {
-                    if (imageFile != null && imageFile.Length > 0)
+                    var uploadFolder = Path.Combine(_environment.WebRootPath, "images");
+                    if (!Directory.Exists(uploadFolder))
+                        Directory.CreateDirectory(uploadFolder);
+                    var fileName = Guid.NewGuid().ToString() + Path.GetExtension(imageFile.FileName);
+                    var filePath = Path.Combine(uploadFolder, fileName);
+                    using (var stream = new FileStream(filePath, FileMode.Create))
                     {
-                        var uploadFolder = Path.Combine(_environment.WebRootPath, "images");
-                        if (!Directory.Exists(uploadFolder))
-                            Directory.CreateDirectory(uploadFolder);
-                        var fileName = Guid.NewGuid().ToString() + Path.GetExtension(imageFile.FileName);
-                        var filePath = Path.Combine(uploadFolder, fileName);
-                        using (var stream = new FileStream(filePath, FileMode.Create))
-                        {
-                            await imageFile.CopyToAsync(stream);
-                        }
-                        flashcardSet.ImagePath = "/images/" + fileName;
+                        await imageFile.CopyToAsync(stream);
                     }
-                    // set the user id and dates
-                    flashcardSet.UserId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier).Value;
-                    flashcardSet.CreatedDate = DateTime.UtcNow;
-                    flashcardSet.ReviewInterval = -1;
-                    flashcardSet.NextReviewDate = DateTime.UtcNow;
-
-                    // if flashcard collection is null, initialize it
-                    if (flashcardSet.Flashcards == null)
-                        flashcardSet.Flashcards = new List<Flashcard>();
-
-                    // add flashcard set to the database
-                    await _context.FlashcardSets.AddAsync(flashcardSet);
-                    await _context.SaveChangesAsync();
-                    return RedirectToAction(nameof(Index));
+                    flashcardSet.ImagePath = "/images/" + fileName;
                 }
-                return View(flashcardSet);
+                // set the user id and dates
+                flashcardSet.UserId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier).Value;
+                flashcardSet.CreatedDate = DateTime.UtcNow;
+                flashcardSet.ReviewInterval = -1;
+                flashcardSet.NextReviewDate = DateTime.UtcNow;
+
+                // if no flashcards are provided in the form, this line will create an empty list for flashcardSet.Flashcards
+                if (flashcardSet.Flashcards == null)
+                    flashcardSet.Flashcards = new List<Flashcard>();
+
+                // add flashcard set to the database
+                await _context.FlashcardSets.AddAsync(flashcardSet);
+                await _context.SaveChangesAsync();
+                return RedirectToAction(nameof(Index));
             }
             catch (Exception e)
             {
-                ModelState.AddModelError("", "Error: " + e.Message);
+                if (e.InnerException != null)
+                    Console.WriteLine("Inner exception: " + e.InnerException.Message);
+                Console.WriteLine("Exception: " + e.Message);
+                ModelState.AddModelError("", "Error: " + e.Message + (e.InnerException != null ? " - Inner exception: " + e.InnerException.Message : ""));
                 return View(flashcardSet);
             }
         }
