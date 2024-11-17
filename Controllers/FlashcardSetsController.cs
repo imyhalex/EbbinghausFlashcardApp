@@ -14,6 +14,7 @@ using System.Reflection.Metadata.Ecma335;
  * @reference: https://learn.microsoft.com/en-us/dotnet/api/system.datetime.utcnow?view=net-8.0
  * @reference: https://learn.microsoft.com/en-us/dotnet/api/microsoft.aspnetcore.hosting.iwebhostenvironment?view=aspnetcore-8.0
  * @reference: https://learn.microsoft.com/en-us/dotnet/api/system.linq.enumerable.any?view=net-8.0
+ * @reference: https://learn.microsoft.com/en-us/aspnet/core/data/ef-mvc/crud?view=aspnetcore-8.0
  */
 namespace EbbinghausFlashcardApp.Controllers
 {
@@ -147,6 +148,60 @@ namespace EbbinghausFlashcardApp.Controllers
             return View(flashcardSet);
         }
 
+        /* this part is for flashcard controllers - CRUD operation for flashcards */
+
+        // method to add a flashcard
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> AddFlashcard(int flashcardSetId, List<Flashcard> flashcards)
+        {
+            if (flashcards == null || !flashcards.Any())
+                return RedirectToAction(nameof(Details), new { id = flashcardSetId });
+            var flashcardSet = await _context.FlashcardSets.FindAsync(flashcardSetId);
+            if (flashcardSet == null)
+                return NotFound();
+            // add each new flashcard to the database
+            foreach (var flashcard in flashcards)
+            {
+                if (!string.IsNullOrEmpty(flashcard.Term) && !string.IsNullOrEmpty(flashcard.Definition))
+                {
+                    flashcard.FlashcardSetId = flashcardSetId;
+                    _context.Flashcards.AddAsync(flashcard);
+                }
+            }
+            await _context.SaveChangesAsync();
+            return RedirectToAction(nameof(Details), new { id = flashcardSetId });
+        }
+
+        // method to edit a falshcard
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> EditFlashcard(int id, string term, string definition)
+        {
+            var flashcard = await _context.Flashcards.FindAsync(id);
+            if (flashcard == null)
+                return NotFound();
+            if (string.IsNullOrEmpty(term) || string.IsNullOrEmpty(definition))
+                return RedirectToAction(nameof(Details), new { id = flashcard.FlashcardSetId });
+            flashcard.Term = term;
+            flashcard.Definition = definition;
+            _context.Update(flashcard);
+            await _context.SaveChangesAsync();
+            return RedirectToAction(nameof(Details), new { id = flashcard.FlashcardSetId });
+        }
+
+        public async Task<IActionResult> DeleteFlashcard(int id)
+        {
+            var flashcard = await _context.Flashcards.FindAsync(id);
+            if (flashcard == null)
+                return NotFound();
+            var flashcardSetId = flashcard.FlashcardSetId;
+            _context.Flashcards.Remove(flashcard);
+            await _context.SaveChangesAsync();
+            return RedirectToAction(nameof(Details), new { id = flashcardSetId });
+        }
+
+        /* all helper function goes here */
         // helper function: check if flashcard set exists
         private bool FlashcardSetExists(int id)
         {

@@ -8,15 +8,93 @@
 <p>@Model.Description</p>
 
 <h3>Flashcards</h3>
-<div class="list-group">
+<div class="list-group mb-4">
     @foreach (var flashcard in Model.Flashcards)
     {
-        <div class="list-group-item">
-            <strong>Term:</strong> @flashcard.Term
-            <p><strong>Definition:</strong> @flashcard.Definition</p>
+        <div class="list-group-item" id="flashcard-@flashcard.Id">
+            <div class="d-flex justify-content-between align-items-center">
+                <div id="flashcard-view-@flashcard.Id">
+                    <strong>Term:</strong> @flashcard.Term
+                    <p><strong>Definition:</strong> @flashcard.Definition</p>
+                </div>
+                <div id="flashcard-edit-@flashcard.Id" style="display: none;">
+                    <form asp-action="EditFlashcard" method="post">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" name="Id" value="@flashcard.Id" />
+                        <input type="hidden" name="FlashcardSetId" value="@Model.Id" />
+                        <div class="form-floating mb-2">
+                            <input name="Term" value="@flashcard.Term" class="form-control" placeholder="Enter term" required />
+                            <label>Enter term</label>
+                        </div>
+                        <div class="form-floating mb-2">
+                            <input name="Definition" value="@flashcard.Definition" class="form-control" placeholder="Enter definition" required />
+                            <label>Enter definition</label>
+                        </div>
+                        <button type="submit" class="btn btn-success btn-sm">Save</button>
+                        <button type="button" class="btn btn-secondary btn-sm" onclick="toggleEditFlashcard(@flashcard.Id)">Cancel</button>
+                    </form>
+                </div>
+                <div>
+                    <button type="button" class="btn btn-warning btn-sm" onclick="toggleEditFlashcard(@flashcard.Id)">Edit</button>
+                    <a asp-action="DeleteFlashcard" asp-route-id="@flashcard.Id" class="btn btn-danger btn-sm" onclick="return confirm('Are you sure you want to delete this flashcard?');">Delete</a>
+                </div>
+            </div>
         </div>
     }
 </div>
 
-<a href="@Url.Action("Review", "Review", new { flashcardSetId = Model.Id })" class="btn btn-primary mt-3">Start Review</a>
+<h4>Add a New Flashcard</h4>
+<form asp-action="AddFlashcard" method="post" id="add-flashcard-form">
+    @Html.AntiForgeryToken()
+    <input type="hidden" name="FlashcardSetId" value="@Model.Id" />
+    <div id="flashcards-list">
+        <!-- this place for dynamic flashcar list -->
+    </div>
+    <button type="button" class="btn btn-outline-primary mt-3" onclick="addFlashcard()">Add a Card</button>
+    <button type="submit" class="btn btn-primary mt-3">Save Flashcards</button>
+</form>
 
+<a asp-controller="Review" asp-action="Review" asp-route-flashcardSetId="@Model.Id" class="btn btn-primary mt-3">Start Review</a>
+
+@section Scripts {
+    <script>
+        let flashcardIndex = 0;
+
+        function addFlashcard() {
+            const flashcardList = document.getElementById('flashcards-list');
+            const newFlashcard = `
+                        <div class="flashcard-item mb-3" data-index="${flashcardIndex}">
+                            <div class="form-floating">
+                                <input class="form-control" name="Flashcards[${flashcardIndex}].Term" placeholder="Enter term" required />
+                                <label>Enter term</label>
+                            </div>
+                            <div class="form-floating mt-2">
+                                <input class="form-control" name="Flashcards[${flashcardIndex}].Definition" placeholder="Enter definition" required />
+                                <label>Enter definition</label>
+                            </div>
+                            <button type="button" class="btn btn-danger mt-2" onclick="removeFlashcard(this)">Remove Card</button>
+                        </div>`;
+            flashcardList.insertAdjacentHTML('beforeend', newFlashcard);
+            flashcardIndex++;
+        }
+
+        function removeFlashcard(button) {
+            const flashcardItem = button.closest('.flashcard-item');
+            if (flashcardItem) {
+                flashcardItem.remove();
+            }
+        }
+
+        function toggleEditFlashcard(flashcardId) {
+            const viewDiv = document.getElementById(`flashcard-view-${flashcardId}`);
+            const editDiv = document.getElementById(`flashcard-edit-${flashcardId}`);
+            if (viewDiv.style.display === "none") {
+                viewDiv.style.display = "block";
+                editDiv.style.display = "none";
+            } else {
+                viewDiv.style.display = "none";
+                editDiv.style.display = "block";
+            }
+        }
+    </script>
+}
