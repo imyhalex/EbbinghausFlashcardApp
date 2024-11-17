@@ -1,8 +1,13 @@
-﻿using Microsoft.AspNetCore.Authorization;
+﻿using EbbinghausFlashcardApp.Data;
+using EbbinghausFlashcardApp.Models;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using EbbinghausFlashcardApp.Data;
-using EbbinghausFlashcardApp.Models;
+
+/*
+ * Acknowledgement: This code is based on the following part: "Views in ASP.NET Core" from the following reference.
+ * @reference: https://learn.microsoft.com/en-us/aspnet/core/mvc/views/overview?view=aspnetcore-8.0 - "What is ViewData and ViewBag"
+ */
 
 namespace EbbinghausFlashcardApp.Controllers
 {
@@ -16,42 +21,37 @@ namespace EbbinghausFlashcardApp.Controllers
             _context = context;
         }
 
-        public async Task<IActionResult> Review(int flashcardSetId)
+        [HttpGet]
+        public async Task<IActionResult?> Review(int flashcardSetId, int currentIndex)
         {
             var flashcardSet = await _context.FlashcardSets
-                .Include(f => f.Flashcards)
-                .FirstOrDefaultAsync(m => m.Id == flashcardSetId);
-
-            if (flashcardSet == null || flashcardSet.UserId != User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier).Value)
-            {
+                .Include(f => f.Flashcards).FirstOrDefaultAsync(f => f.Id == flashcardSetId);
+            if (flashcardSet == null || !flashcardSet.Flashcards.Any())
                 return NotFound();
-            }
 
-            var flashcardsToReview = flashcardSet.Flashcards.Where(f => f.IsFamiliar == false).ToList();
+            if (currentIndex < 0)
+                currentIndex = 0;
+            if (currentIndex >= flashcardSet.Flashcards.Count)
+                currentIndex = flashcardSet.Flashcards.Count - 1;
 
-            if (flashcardsToReview.Count == 0)
-            {
-                ViewBag.Message = "No flashcards to review!";
-                return View("NoReview");
-            }
+            ViewBag.CurrentIndex = currentIndex;
+            ViewBag.TotalCount = flashcardSet.Flashcards.Count;
 
-            return View(flashcardsToReview.FirstOrDefault());
+            return View(flashcardSet);
         }
 
         [HttpPost]
-        public async Task<IActionResult> Review(int id, bool isFamiliar)
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> MarkFlashcard(int flashcardSetId, int flashcardId, bool isFamiliar, int currentIndex)
         {
-            var flashcard = await _context.Flashcards.FindAsync(id);
-
+            var flashcard = await _context.Flashcards.FindAsync(flashcardId);
             if (flashcard == null)
-            {
                 return NotFound();
-            }
 
             flashcard.IsFamiliar = isFamiliar;
+            _context.Update(flashcard);
             await _context.SaveChangesAsync();
-
-            return RedirectToAction("Review", new { flashcardSetId = flashcard.FlashcardSetId });
+            return RedirectToAction(nameof(Review), new { flashcardSetId, currentIndex = currentIndex + 1 });
         }
     }
 }

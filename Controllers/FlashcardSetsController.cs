@@ -30,6 +30,8 @@ namespace EbbinghausFlashcardApp.Controllers
             _environment = environment;
         }
 
+        /* this part is for flashcard sets rendering and crud implementations */
+
         // display flashcardsets in the at FalshcardSets/Index
         [HttpGet]
         public async Task<IActionResult> Index()
@@ -92,6 +94,7 @@ namespace EbbinghausFlashcardApp.Controllers
             }
         }
 
+        // this method for details page's rendering purpose
         public async Task<IActionResult> Details(int id)
         {
             var flashcardSet = await _context.FlashcardSets
@@ -101,51 +104,50 @@ namespace EbbinghausFlashcardApp.Controllers
             return View(flashcardSet);
         }
 
-        // method to edit exsiting flashcard set (GET)
-        public async Task<IActionResult> Edit(int id)
-        {
-            var flashcarSet = await _context.FlashcardSets
-                .Include(f => f.Flashcards).FirstOrDefaultAsync(m => m.Id == id);
-            if (flashcarSet == null)
-                return NotFound();
-            return View(flashcarSet);
-        }
-
-        // method to edit existing flashcar set (POST) - from "The PutTodoItem method" in mircosoft tutorial
+        // method to delete a flashcard set
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Edit(int id, FlashcardSet flashcardSet)
+        public async Task<IActionResult> DeleteFlashcardSet(int id)
         {
-            if (id != flashcardSet.Id)
+            var flashcardSet = await _context.FlashcardSets
+                .Include(f => f.Flashcards).FirstOrDefaultAsync(m => m.Id == id);
+            if (flashcardSet == null)
                 return NotFound();
-            if (ModelState.IsValid)
-            {
-                try
-                {
-                    _context.Update(flashcardSet);
 
-                    // if new flashcard have been createdm save changes to the database
-                    foreach (var flashcard in flashcardSet.Flashcards)
-                    {
-                        if (flashcard.Id == 0)
-                        {
-                            flashcard.FlashcardSetId = flashcardSet.Id;
-                            _context.Flashcards.Add(flashcard);
-                        }
-                        else
-                            _context.Entry(flashcard).State = EntityState.Modified;
-                    }
-                    await _context.SaveChangesAsync();
-                    return RedirectToAction(nameof(Index));
-                }
-                catch (DbUpdateConcurrencyException)
-                {
-                    if (!FlashcardSetExists(id))
-                        return NotFound();
-                    throw;
-                }
-            }
-            return View(flashcardSet);
+            // first remove all flashcards in the flashcard set
+            _context.Flashcards.RemoveRange(flashcardSet.Flashcards);
+            // then remove the flashcard set
+            _context.FlashcardSets.Remove(flashcardSet);
+            await _context.SaveChangesAsync();
+            return RedirectToAction(nameof(Index));
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> EditSetName(int id, string name)
+        {
+            var flashcardSet = await _context.FlashcardSets.FindAsync(id);
+            if (flashcardSet == null)
+                return NotFound();
+
+            flashcardSet.Name = name;
+            _context.Update(flashcardSet);
+            await _context.SaveChangesAsync();
+            return RedirectToAction(nameof(Details), new { id });
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> EditSetDescription(int id, string description)
+        {
+            var flashcardSet = await _context.FlashcardSets.FindAsync(id);
+            if (flashcardSet == null)
+                return NotFound();
+
+            flashcardSet.Description = description;
+            _context.Update(flashcardSet);
+            await _context.SaveChangesAsync();
+            return RedirectToAction(nameof(Details), new { id });
         }
 
         /* this part is for flashcard controllers - CRUD operation for flashcards */
@@ -183,6 +185,7 @@ namespace EbbinghausFlashcardApp.Controllers
                 return NotFound();
             if (string.IsNullOrEmpty(term) || string.IsNullOrEmpty(definition))
                 return RedirectToAction(nameof(Details), new { id = flashcard.FlashcardSetId });
+            
             flashcard.Term = term;
             flashcard.Definition = definition;
             _context.Update(flashcard);
@@ -190,13 +193,31 @@ namespace EbbinghausFlashcardApp.Controllers
             return RedirectToAction(nameof(Details), new { id = flashcard.FlashcardSetId });
         }
 
+        [HttpGet]
         public async Task<IActionResult> DeleteFlashcard(int id)
         {
             var flashcard = await _context.Flashcards.FindAsync(id);
             if (flashcard == null)
                 return NotFound();
+            
             var flashcardSetId = flashcard.FlashcardSetId;
             _context.Flashcards.Remove(flashcard);
+            await _context.SaveChangesAsync();
+            return RedirectToAction(nameof(Details), new { id = flashcardSetId });
+        }
+
+        // method to delete all flashcard within a flashcard set
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> DeleteAllFlashcards(int flashcardSetId)
+        {
+            var flashcarSet = await _context.FlashcardSets
+                .Include(f => f.Flashcards).FirstOrDefaultAsync(f => f.Id == flashcardSetId);
+            if (flashcarSet == null)
+                return NotFound();
+            
+            // perform removal of all flashcards
+            _context.Flashcards.RemoveRange(flashcarSet.Flashcards);
             await _context.SaveChangesAsync();
             return RedirectToAction(nameof(Details), new { id = flashcardSetId });
         }

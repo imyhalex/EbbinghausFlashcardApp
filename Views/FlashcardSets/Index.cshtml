@@ -15,17 +15,28 @@
     {
         @foreach (var set in Model)
         {
-            <a href="@Url.Action("Details", "FlashcardSets", new { id = set.Id })" class="list-group-item list-group-item-action">
-                <div class="d-flex w-100 justify-content-between">
-                    <h5 class="mb-1">@set.Name</h5>
-                    <small>@set.CreatedDate.ToShortDateString()</small>
+            <div class="list-group-item">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <a asp-action="Details" asp-route-id="@set.Id" class="list-group-item-action">
+                            <h5 class="mb-1">@set.Name</h5>
+                        </a>
+                        <small>@set.CreatedDate.ToShortDateString()</small>
+                        <p class="mb-1">@set.Description</p>
+                        @if (!string.IsNullOrEmpty(set.ImagePath))
+                        {
+                            <img src="@set.ImagePath" alt="Image for @set.Name" class="img-thumbnail" style="max-width: 150px; max-height: 150px;" />
+                        }
+                    </div>
+                    <div>
+                        <form asp-action="DeleteFlashcardSet" asp-controller="FlashcardSets" method="post" class="d-inline-block">
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" name="id" value="@set.Id" />
+                            <button type="submit" class="btn btn-danger" onclick="return confirm('Are you sure you want to delete this flashcard set and all its flashcards?');">Delete</button>
+                        </form>
+                    </div>
                 </div>
-                <p class="mb-1">@set.Description</p>
-                @if (!string.IsNullOrEmpty(set.ImagePath))
-                {
-                    <img src="@set.ImagePath" alt="Image for @set.Name" class="img-thumbnail" style="max-width: 150px; max-height: 150px;" />
-                }
-            </a>
+            </div>
         }
     }
     else
