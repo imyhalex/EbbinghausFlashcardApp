@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Identity;
 using EbbinghausFlashcardApp.Data;
 using EbbinghausFlashcardApp.Models;
 using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.SignalR;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -52,6 +53,12 @@ app.UseStaticFiles();
 app.UseRouting();
 app.UseAuthentication();
 app.UseAuthorization();
+
+app.UseEndpoints(endpoints =>
+{
+    endpoints.MapControllers();
+    endpoints.MapHub<Hubs.NotificationHub>("/notificationHub");
+});
 
 app.Use(async (context, next) =>
 {

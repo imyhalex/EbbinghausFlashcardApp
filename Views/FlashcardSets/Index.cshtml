@@ -21,7 +21,7 @@
                         <a asp-action="Details" asp-route-id="@set.Id" class="list-group-item-action">
                             <h5 class="mb-1">@set.Name</h5>
                         </a>
-                        <small>@set.CreatedDate.ToShortDateString()</small>
+                        <small>Create Date: @set.CreatedDate.ToShortDateString()</small>
                         <p class="mb-1">@set.Description</p>
                         @if (!string.IsNullOrEmpty(set.ImagePath))
                         {

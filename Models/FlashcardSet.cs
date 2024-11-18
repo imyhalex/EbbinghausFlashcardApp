@@ -12,8 +12,11 @@ namespace EbbinghausFlashcardApp.Models
 
         [Required(ErrorMessage = "Description is required.")]
         public string Description { get; set; }
+
         public DateTime CreatedDate { get; set; }
-        public int ReviewInterval { get; set; } // Reviewed spots in 20minutes, 1 hour, half a day, 1 day, 2 days, 4 days, 7 days, 15 days, 30 days (reset and restart a new cycle after 30 days)
+
+        public int ReviewInterval { get; set; } // reviewed spots in 20minutes, 1 hour, half a day, 1 day, 2 days, 4 days, 7 days, 15 days, 30 days (reset and restart a new cycle after 30 days)
+        
         public DateTime NextReviewDate { get; set; }
 
         // caught by exception in Controllers/FlashcarSets.cs Create(): this should be nullable, else Set cannot be insert successfully
