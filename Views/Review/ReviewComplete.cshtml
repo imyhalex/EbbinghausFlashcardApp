@@ -1,0 +1,14 @@
+﻿@model EbbinghausFlashcardApp.Models.FlashcardSet
+
+@{
+    ViewData["Title"] = "Review Complete";
+}
+
+<h2>Review Complete</h2>
+<p>You have completed reviewing all flashcards in '<strong>@Model.Name</strong>'.</p>
+
+<form asp-action="CompleteReview" method="post">
+    @Html.AntiForgeryToken()
+    <input type="hidden" name="flashcardSetId" value="@Model.Id" />
+    <button type="submit" class="btn btn-primary">Finish Review</button>
+</form>

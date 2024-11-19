@@ -7,13 +7,6 @@
     var flashcardsList = Model.Flashcards.ToList();
 }
 
-<form asp-action="CompleteReview" method="post" class="d-inline">
-    @Html.AntiForgeryToken()
-    <input type="hidden" name="flashcardSetId" value="@Model.Id" />
-    <button type="submit" class="btn btn-link">Exit Review</button>
-</form>
-
-
 <div class="card mt-4">
     <div class="card-body">
         <h3 class="card-title">Flashcard @(currentIndex + 1) of @totalCount</h3>
@@ -39,27 +32,19 @@
             {
                 <a asp-action="Review" asp-route-flashcardSetId="@Model.Id" asp-route-currentIndex="@(currentIndex - 1)" class="btn btn-secondary">Previous</a>
             }
-            @if (currentIndex < totalCount - 1)
-            {
-                <a asp-action="Review" asp-route-flashcardSetId="@Model.Id" asp-route-currentIndex="@(currentIndex + 1)" class="btn btn-secondary">Next</a>
-            }
+            @* Remove the "Next" button since MarkFlashcard handles navigation *@
         </div>
     </div>
 </div>
 
+<form asp-action="CompleteReview" method="post" class="mt-4">
+    @Html.AntiForgeryToken()
+    <input type="hidden" name="flashcardSetId" value="@Model.Id" />
+    <button type="submit" class="btn btn-link">Exit Review</button>
+</form>
+
 @section Scripts {
     <script>
-        function handleExitReview(currentIndex, totalCount) {
-            if (currentIndex === totalCount - 1) {
-                // User has reached the last flashcard, so trigger complete review action
-                return true; // Allow the link to navigate to the complete review action
-            } else {
-                // If not finished, return to details page without completing
-                window.location.href = `/FlashcardSets/Details/${currentIndex}`; // Redirect to details page
-                return false; // Prevent link navigation
-            }
-        }
-
         function toggleDefinition() {
             const definitionContainer = document.getElementById('definition-container');
             const showDefinitionBtn = document.getElementById('show-definition-btn');

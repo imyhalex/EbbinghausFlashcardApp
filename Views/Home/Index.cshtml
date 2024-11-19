@@ -1,4 +1,5 @@
-﻿@{
+﻿@model IEnumerable<EbbinghausFlashcardApp.Models.FlashcardSet>
+@{
     ViewData["Title"] = "Home Page";
 }
 
@@ -13,20 +14,133 @@
     <p>Spaced repetition is a technique that uses the Ebbinghaus Forgetting Curve to help you remember information more effectively. By reviewing flashcards at increasing intervals, you can reinforce your memory and retain information for longer periods of time.</p>
 </div>
 <div>
+    <h2>How Does the Review Logic Work?</h2>
+    <p>The app schedules reviews of your flashcard sets based on the following intervals:</p>
+    <table class="table table-bordered">
+        <thead>
+            <tr>
+                <th>Review Stage</th>
+                <th>Interval</th>
+                <th>Next Review After</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>Initial Learning</td>
+                <td>0</td>
+                <td>Immediately</td>
+            </tr>
+            <tr>
+                <td>Stage 0</td>
+                <td>20 minutes</td>
+                <td>20 minutes later</td>
+            </tr>
+            <tr>
+                <td>Stage 1</td>
+                <td>1 hour</td>
+                <td>1 hour later</td>
+            </tr>
+            <tr>
+                <td>Stage 2</td>
+                <td>6 hours</td>
+                <td>6 hours later</td>
+            </tr>
+            <tr>
+                <td>Stage 3</td>
+                <td>12 hours</td>
+                <td>12 hours later</td>
+            </tr>
+            <tr>
+                <td>Stage 4</td>
+                <td>1 day</td>
+                <td>1 day later</td>
+            </tr>
+            <tr>
+                <td>Stage 5</td>
+                <td>2 days</td>
+                <td>2 days later</td>
+            </tr>
+            <tr>
+                <td>Stage 6</td>
+                <td>4 days</td>
+                <td>4 days later</td>
+            </tr>
+            <tr>
+                <td>Stage 7</td>
+                <td>7 days</td>
+                <td>7 days later</td>
+            </tr>
+            <tr>
+                <td>Stage 8</td>
+                <td>15 days</td>
+                <td>15 days later</td>
+            </tr>
+            <tr>
+                <td>Stage 9</td>
+                <td>30 days</td>
+                <td>30 days later</td>
+            </tr>
+        </tbody>
+    </table>
+    <p>After completing all stages, the cycle resets to reinforce long-term retention.</p>
+    <p>When a flashcard set reaches its next review date, it will appear in the "To Review" section below in real-time by using SignalR integration. Technically, there's no need to refresh the page.</p>
+    <p><strong>Note:</strong> In current version, you have to create a flashcard within a set to make sure the review functionality is fully work. 
+        Otherwise you will get a page not found error if you start reviwe a empty set.</p>
+</div>
+<div>
     <h2>To Review</h2>
     <p>This is a real-time app and flashcard sets you need to review will automatically apper in in this section</p>
+    <p>Flashcard sets due for review will appear here automatically:</p>
     <div id="toReviewSection">
-        <!-- flashcard sets that need review will be added here dynamically -->
+        <!-- render flashcard sets that need review -->
+        @foreach(var flashcardSet in Model)
+        {
+            <div id="flashcardSet-@flashcardSet.Id" class="alert alert-info">
+                <strong>@flashcardSet.Name</strong> needs to be reviewed.
+                <a href="@Url.Action("Review", "Review", new { flashcardSetId = flashcardSet.Id, currentIndex = 0 })" class="btn btn-primary btn-sm">Start Review</a>
+            </div>
+        }
     </div>
+</div>
+<div>
+    <h2>Notification History</h2>
+    <ul id="notificationHistory" class="list-group">
+        <!-- placeholder for notification history part -->
+    </ul>
 </div>
 
 <!-- include signalr JavaScript client -->
 @section Scripts {
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/5.0.9/signalr.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/6.0.0/signalr.min.js"></script>
     <script>
         const connection = new signalR.HubConnectionBuilder()
             .withUrl("/notificationHub")
             .build();
+
+        // Load notification history from localStorage
+        function loadNotificationHistory() {
+            const notificationHistory = document.getElementById("notificationHistory");
+            const historyData = JSON.parse(localStorage.getItem("notificationHistory")) || [];
+            historyData.forEach(item => {
+                const historyItem = document.createElement("li");
+                historyItem.className = "list-group-item";
+                historyItem.textContent = item;
+                notificationHistory.appendChild(historyItem);
+            });
+        }
+
+        // Save notification to localStorage
+        function saveNotificationToHistory(notification) {
+            const maxHistoryItems = 50; // Maximum number of notifications to keep
+            let historyData = JSON.parse(localStorage.getItem("notificationHistory")) || [];
+            historyData.push(notification);
+            if (historyData.length > maxHistoryItems) {
+                historyData = historyData.slice(-maxHistoryItems);
+            }
+            localStorage.setItem("notificationHistory", JSON.stringify(historyData));
+        }
+        
+        loadNotificationHistory();
 
         // Listen for notifications and log the connection status
         connection.on("ReceiveMessage", function (user, message) {
@@ -40,18 +154,30 @@
             setTimeout(() => {
                 document.body.removeChild(notificationElement);
             }, 10000);
+
+            // notification history
+            const notificationHistory = document.getElementById("notificationHistory");
+            const historyItem = document.createElement("li");
+            historyItem.className = "list-group-item";
+            const notificationText = `${new Date().toLocaleString()} - ${user}: ${message}`;
+            historyItem.textContent = notificationText;
+            notificationHistory.appendChild(historyItem);
+            saveNotificationToHistory(notificationText);
         });
 
         // Add flashcard sets in the "To Review" section
         connection.on("AddFlashcardSet", function (flashcardSetId, flashcardSetName) {
-            const reviewList = document.getElementById("toReviewSection");
-            const flashcardItem = document.createElement("div");
-            flashcardItem.id = `flashcardSet-${flashcardSetId}`;
-            flashcardItem.className = "alert alert-info";
-            flashcardItem.innerHTML = `<strong>${flashcardSetName}</strong> needs to be reviewed.
-                                              <a href="/Review/Review?flashcardSetId=${flashcardSetId}&currentIndex=0"
-                                              class="btn btn-primary btn-sm">Start Review</a>`;
-            reviewList.appendChild(flashcardItem);
+            const existingItem = document.getElementById(`flashcardSet-${flashcardSetId}`);
+            if (!existingItem) {
+                const reviewList = document.getElementById("toReviewSection");
+                const flashcardItem = document.createElement("div");
+                flashcardItem.id = `flashcardSet-${flashcardSetId}`;
+                flashcardItem.className = "alert alert-info";
+                flashcardItem.innerHTML = `<strong>${flashcardSetName}</strong> needs to be reviewed.
+                                                      <a href="/Review/Review?flashcardSetId=${flashcardSetId}&currentIndex=0"
+                                                      class="btn btn-primary btn-sm">Start Review</a>`;
+                reviewList.appendChild(flashcardItem);
+            }
         });
 
         // Remove flashcard sets from the "To Review" section

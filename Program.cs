@@ -5,6 +5,7 @@ using EbbinghausFlashcardApp.Models;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.SignalR;
 using EbbinghausFlashcardApp.Hubs;
+using EbbinghausFlashcardApp.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -16,6 +17,9 @@ builder.Services.AddRazorPages();
 // add db context
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+
+// add hosted service
+builder.Services.AddHostedService<ReviewNotificationService>();
 
 // disable email confirmation and add identity procedure
 // I don't want to have email confimation for this time, maybe added it later. But the database still accept email field
@@ -70,7 +74,8 @@ app.Use(async (context, next) =>
         "/lib",
         "/css",
         "/js",
-        "/favicon.ico"
+        "/favicon.ico",
+        "/notificationHub"
     };
 
     if (!context.User.Identity.IsAuthenticated &&

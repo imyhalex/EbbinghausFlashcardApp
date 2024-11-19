@@ -67,6 +67,17 @@ namespace EbbinghausFlashcardApp.Controllers
             flashcard.IsFamiliar = isFamiliar;
             _context.Update(flashcard);
             await _context.SaveChangesAsync();
+
+            // get the total number of flashcards in the set
+            var flashcardSet = await _context.FlashcardSets
+                .Include(f => f.Flashcards).FirstOrDefaultAsync(f => f.Id == flashcardSetId);
+            if (flashcardSet == null || !flashcardSet.Flashcards.Any())
+                return NotFound();
+
+            int totalCount = flashcardSet.Flashcards.Count;
+            if (currentIndex + 1 >= totalCount)
+                return View("ReviewComplete", flashcardSet);
+
             return RedirectToAction(nameof(Review), new { flashcardSetId, currentIndex = currentIndex + 1 });
         }
 
@@ -75,6 +86,9 @@ namespace EbbinghausFlashcardApp.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> CompleteReview(int flashcardSetId)
         {
+            // avoid sending notification too soon and background service picking it up too soon
+            int bufferMins = 5;
+
             var flashcardSet = await _context.FlashcardSets.FindAsync(flashcardSetId);
             if (flashcardSet == null)
                 return NotFound();
@@ -84,12 +98,12 @@ namespace EbbinghausFlashcardApp.Controllers
             int nextInterval = GetNextInterval(currentStage + 1);
 
             if (nextInterval == 0)
-                flashcardSet.NextReviewDate = DateTime.UtcNow.AddMinutes(20); // test the app by changing the interval to 1 minute
+                flashcardSet.NextReviewDate = DateTime.UtcNow.AddMinutes(20 + bufferMins); // test the app by changing the interval to 1 minute
             // if the interval has hit the cap of 30 days, reset the progress
             else if (nextInterval >= 720)
             {
-                flashcardSet.NextReviewDate = DateTime.UtcNow.AddMinutes(20);
-                await _hubContext.Clients.All.SendAsync("ReceivedMessage", "System", $"Flashcard set '{flashcardSet.Name}' has been reset. The review process starts again from the beginning.");
+                flashcardSet.NextReviewDate = DateTime.UtcNow.AddMinutes(20 + bufferMins);
+                await _hubContext.Clients.All.SendAsync("ReceiveMessage", "System", $"Flashcard set '{flashcardSet.Name}' has been reset. The review process starts again from the beginning.");
             }
             else
                 flashcardSet.NextReviewDate = DateTime.UtcNow.AddHours(nextInterval);

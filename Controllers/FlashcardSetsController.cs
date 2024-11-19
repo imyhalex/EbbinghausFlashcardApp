@@ -89,6 +89,7 @@ namespace EbbinghausFlashcardApp.Controllers
                 await _context.SaveChangesAsync();
                 // add the new flashcard to the review list
                 await _hubContext.Clients.All.SendAsync("AddFlashcardSet", flashcardSet.Id, flashcardSet.Name);
+                await _hubContext.Clients.All.SendAsync("ReceiveMessage", "System", $"Flashcard set '{flashcardSet.Name}' is now ready for review.");
                 return RedirectToAction(nameof(Index));
             }
             catch (Exception e)
