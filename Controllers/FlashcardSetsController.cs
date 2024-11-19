@@ -2,8 +2,11 @@
 using EbbinghausFlashcardApp.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using System.Reflection.Metadata.Ecma335;
+using EbbinghausFlashcardApp.Hubs;
+
 /*
  * Acknoledgement: this code follows the Microsoft tutorials or documentations below
  * @reference: https://learn.microsoft.com/en-us/aspnet/core/tutorials/first-mvc-app/adding-controller?view=aspnetcore-8.0&tabs=visual-studio
@@ -23,11 +26,13 @@ namespace EbbinghausFlashcardApp.Controllers
     {
         private readonly ApplicationDbContext _context;
         private readonly IWebHostEnvironment _environment;
+        private readonly IHubContext<NotificationHub> _hubContext;
 
-        public FlashcardSetsController(ApplicationDbContext context, IWebHostEnvironment environment)
+        public FlashcardSetsController(ApplicationDbContext context, IWebHostEnvironment environment, IHubContext<NotificationHub> hubContext)
         {
             _context = context;
             _environment = environment;
+            _hubContext = hubContext;
         }
 
         /* this part is for flashcard sets rendering and crud implementations */
@@ -82,6 +87,8 @@ namespace EbbinghausFlashcardApp.Controllers
                 // add flashcard set to the database
                 await _context.FlashcardSets.AddAsync(flashcardSet);
                 await _context.SaveChangesAsync();
+                // add the new flashcard to the review list
+                await _hubContext.Clients.All.SendAsync("AddFlashcardSet", flashcardSet.Id, flashcardSet.Name);
                 return RedirectToAction(nameof(Index));
             }
             catch (Exception e)

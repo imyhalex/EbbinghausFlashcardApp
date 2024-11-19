@@ -7,11 +7,16 @@
     var flashcardsList = Model.Flashcards.ToList();
 }
 
-<a asp-controller="FlashcardSets" asp-action="Details" asp-route-id="@Model.Id" class="btn btn-link">Exit Review</a>
+<form asp-action="CompleteReview" method="post" class="d-inline">
+    @Html.AntiForgeryToken()
+    <input type="hidden" name="flashcardSetId" value="@Model.Id" />
+    <button type="submit" class="btn btn-link">Exit Review</button>
+</form>
+
 
 <div class="card mt-4">
     <div class="card-body">
-        <h3 class="card-title">Flashcard @currentIndex + 1 of @totalCount</h3>
+        <h3 class="card-title">Flashcard @(currentIndex + 1) of @totalCount</h3>
         <p class="card-text">
             <strong>Term:</strong> @flashcardsList[currentIndex].Term
         </p>
@@ -44,6 +49,17 @@
 
 @section Scripts {
     <script>
+        function handleExitReview(currentIndex, totalCount) {
+            if (currentIndex === totalCount - 1) {
+                // User has reached the last flashcard, so trigger complete review action
+                return true; // Allow the link to navigate to the complete review action
+            } else {
+                // If not finished, return to details page without completing
+                window.location.href = `/FlashcardSets/Details/${currentIndex}`; // Redirect to details page
+                return false; // Prevent link navigation
+            }
+        }
+
         function toggleDefinition() {
             const definitionContainer = document.getElementById('definition-container');
             const showDefinitionBtn = document.getElementById('show-definition-btn');
