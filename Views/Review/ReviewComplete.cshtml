@@ -12,3 +12,38 @@
     <input type="hidden" name="flashcardSetId" value="@Model.Id" />
     <button type="submit" class="btn btn-primary">Finish Review</button>
 </form>
+
+@section Scripts {
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/6.0.0/signalr.min.js"></script>
+    <script>
+        const connection = new signalR.HubConnectionBuilder()
+            .withUrl("/notificationHub")
+            .build();
+
+        let isConnectionEstablished = false;
+
+        connection.on("ReceiveMessage", function (user, message) {
+            console.log(`Message received from ${user}: ${message}`);
+            alert(`${user}: ${message}`);
+        });
+
+        connection.start()
+            .then(function () {
+                console.log("SignalR connection established in ReviewComplete view.");
+                isConnectionEstablished = true;
+                // Enable the submit button
+                document.querySelector('#completeReviewForm button[type="submit"]').disabled = false;
+            })
+            .catch(function (err) {
+                console.error("Error establishing SignalR connection: " + err.toString());
+            });
+
+        // Optionally, prevent form submission until connection is established
+        document.getElementById('completeReviewForm').addEventListener('submit', function (e) {
+            if (!isConnectionEstablished) {
+                e.preventDefault();
+                alert("Please wait for the connection to be established.");
+            }
+        });
+    </script>
+}
