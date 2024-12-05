@@ -102,17 +102,18 @@
         function addFlashcard() {
             const flashcardList = document.getElementById('flashcards-list');
             const newFlashcard = `
-                        <div class="flashcard-item mb-3" data-index="${flashcardIndex}">
-                            <div class="form-floating">
-                                <input class="form-control" name="Flashcards[${flashcardIndex}].Term" placeholder="Enter term" required />
-                                <label>Enter term</label>
-                            </div>
-                            <div class="form-floating mt-2">
-                                <input class="form-control" name="Flashcards[${flashcardIndex}].Definition" placeholder="Enter definition" required />
-                                <label>Enter definition</label>
-                            </div>
-                            <button type="button" class="btn btn-danger mt-2" onclick="removeFlashcard(this)">Remove Card</button>
-                        </div>`;
+                <div class="flashcard-item mb-3" data-index="${flashcardIndex}">
+                    <input type="hidden" name="flashcards[${flashcardIndex}].IsFamiliar" value="false" />
+                    <div class="form-floating">
+                        <input class="form-control" name="flashcards[${flashcardIndex}].Term" placeholder="Enter term" required />
+                        <label>Enter term</label>
+                    </div>
+                    <div class="form-floating mt-2">
+                        <input class="form-control" name="flashcards[${flashcardIndex}].Definition" placeholder="Enter definition" required />
+                        <label>Enter definition</label>
+                    </div>
+                    <button type="button" class="btn btn-danger mt-2" onclick="removeFlashcard(this)">Remove Card</button>
+                </div>`;
             flashcardList.insertAdjacentHTML('beforeend', newFlashcard);
             flashcardIndex++;
         }

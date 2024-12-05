@@ -104,6 +104,7 @@
 </div>
 <div>
     <h2>Notification History</h2>
+    <button id="clearNotificationHistory" class="btn btn-secondary mb-2">Clear Notification History</button>
     <ul id="notificationHistory" class="list-group">
         <!-- placeholder for notification history part -->
     </ul>
@@ -111,91 +112,119 @@
 
 <!-- include signalr JavaScript client -->
 @section Scripts {
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/6.0.0/signalr.min.js"></script>
-    <script>
-        const connection = new signalR.HubConnectionBuilder()
-            .withUrl("/notificationHub")
-            .build();
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/6.0.0/signalr.min.js"></script>
+        <script>
+            // Initialize SignalR connection
+            const connection = new signalR.HubConnectionBuilder()
+                .withUrl("/notificationHub")
+                .build();
 
-        // Load notification history from localStorage
-        function loadNotificationHistory() {
-            const notificationHistory = document.getElementById("notificationHistory");
-            const historyData = JSON.parse(localStorage.getItem("notificationHistory")) || [];
-            historyData.forEach(item => {
+            // Load notification history from localStorage
+            function loadNotificationHistory() {
+                const notificationHistory = document.getElementById("notificationHistory");
+                const historyData = JSON.parse(localStorage.getItem("notificationHistory")) || [];
+                historyData.forEach(item => {
+                    const historyItem = document.createElement("li");
+                    historyItem.className = "list-group-item";
+                    historyItem.textContent = item;
+                    notificationHistory.appendChild(historyItem);
+                });
+
+                // Enable or disable the clear button based on history
+                toggleClearButton();
+            }
+
+            // Save notification to localStorage
+            function saveNotificationToHistory(notification) {
+                const maxHistoryItems = 50; // Maximum number of notifications to keep
+                let historyData = JSON.parse(localStorage.getItem("notificationHistory")) || [];
+                historyData.push(notification);
+                if (historyData.length > maxHistoryItems) {
+                    historyData = historyData.slice(-maxHistoryItems);
+                }
+                localStorage.setItem("notificationHistory", JSON.stringify(historyData));
+
+                // Enable the clear button when a new notification is saved
+                toggleClearButton();
+            }
+
+            // Function to toggle the disabled state of the clear button
+            function toggleClearButton() {
+                const clearButton = document.getElementById('clearNotificationHistory');
+                const historyData = JSON.parse(localStorage.getItem("notificationHistory")) || [];
+                clearButton.disabled = historyData.length === 0;
+            }
+
+            // Load notification history on page load
+            loadNotificationHistory();
+
+            // Listen for notifications
+            connection.on("ReceiveMessage", function (user, message) {
+                console.log(`Message received from ${user}: ${message}`);
+                const notificationElement = document.createElement("div");
+                notificationElement.className = "alert alert-info";
+                notificationElement.textContent = `${user}: ${message}`;
+                document.body.appendChild(notificationElement);
+
+                // Automatically remove notification after 10 seconds
+                setTimeout(() => {
+                    document.body.removeChild(notificationElement);
+                }, 10000);
+
+                // Update notification history
+                const notificationHistory = document.getElementById("notificationHistory");
                 const historyItem = document.createElement("li");
                 historyItem.className = "list-group-item";
-                historyItem.textContent = item;
+                const notificationText = `${new Date().toLocaleString()} - ${user}: ${message}`;
+                historyItem.textContent = notificationText;
                 notificationHistory.appendChild(historyItem);
+                saveNotificationToHistory(notificationText);
             });
-        }
 
-        // Save notification to localStorage
-        function saveNotificationToHistory(notification) {
-            const maxHistoryItems = 50; // Maximum number of notifications to keep
-            let historyData = JSON.parse(localStorage.getItem("notificationHistory")) || [];
-            historyData.push(notification);
-            if (historyData.length > maxHistoryItems) {
-                historyData = historyData.slice(-maxHistoryItems);
-            }
-            localStorage.setItem("notificationHistory", JSON.stringify(historyData));
-        }
-        
-        loadNotificationHistory();
-
-        // Listen for notifications and log the connection status
-        connection.on("ReceiveMessage", function (user, message) {
-            console.log(`Message received from ${user}: ${message}`);
-            const notificationElement = document.createElement("div");
-            notificationElement.className = "alert alert-info";
-            notificationElement.textContent = `${user}: ${message}`;
-            document.body.appendChild(notificationElement);
-
-            // Automatically remove notification after 10 seconds
-            setTimeout(() => {
-                document.body.removeChild(notificationElement);
-            }, 10000);
-
-            // notification history
-            const notificationHistory = document.getElementById("notificationHistory");
-            const historyItem = document.createElement("li");
-            historyItem.className = "list-group-item";
-            const notificationText = `${new Date().toLocaleString()} - ${user}: ${message}`;
-            historyItem.textContent = notificationText;
-            notificationHistory.appendChild(historyItem);
-            saveNotificationToHistory(notificationText);
-        });
-
-        // Add flashcard sets in the "To Review" section
-        connection.on("AddFlashcardSet", function (flashcardSetId, flashcardSetName) {
-            const existingItem = document.getElementById(`flashcardSet-${flashcardSetId}`);
-            if (!existingItem) {
-                const reviewList = document.getElementById("toReviewSection");
-                const flashcardItem = document.createElement("div");
-                flashcardItem.id = `flashcardSet-${flashcardSetId}`;
-                flashcardItem.className = "alert alert-info";
-                flashcardItem.innerHTML = `<strong>${flashcardSetName}</strong> needs to be reviewed.
-                                                      <a href="/Review/Review?flashcardSetId=${flashcardSetId}&currentIndex=0"
-                                                      class="btn btn-primary btn-sm">Start Review</a>`;
-                reviewList.appendChild(flashcardItem);
-            }
-        });
-
-        // Remove flashcard sets from the "To Review" section
-        connection.on("RemoveFlashcardSet", function (flashcardSetId) {
-            const flashcardItem = document.getElementById(`flashcardSet-${flashcardSetId}`);
-            if (flashcardItem) {
-                flashcardItem.remove();
-            }
-        });
-
-        // Start SignalR connection
-        connection.start()
-            .then(function () {
-                console.log("SignalR connection established.");
-            })
-            .catch(function (err) {
-                console.error("Error establishing SignalR connection: " + err.toString());
+            // Add flashcard sets to the "To Review" section
+            connection.on("AddFlashcardSet", function (flashcardSetId, flashcardSetName) {
+                const existingItem = document.getElementById(`flashcardSet-${flashcardSetId}`);
+                if (!existingItem) {
+                    const reviewList = document.getElementById("toReviewSection");
+                    const flashcardItem = document.createElement("div");
+                    flashcardItem.id = `flashcardSet-${flashcardSetId}`;
+                    flashcardItem.className = "alert alert-info";
+                    flashcardItem.innerHTML = `<strong>${flashcardSetName}</strong> needs to be reviewed.
+                        <a href="/Review/Review?flashcardSetId=${flashcardSetId}&currentIndex=0"
+                        class="btn btn-primary btn-sm">Start Review</a>`;
+                    reviewList.appendChild(flashcardItem);
+                }
             });
-    </script>
+
+            // Remove flashcard sets from the "To Review" section
+            connection.on("RemoveFlashcardSet", function (flashcardSetId) {
+                const flashcardItem = document.getElementById(`flashcardSet-${flashcardSetId}`);
+                if (flashcardItem) {
+                    flashcardItem.remove();
+                }
+            });
+
+            // Event listener for clearing notification history
+            document.getElementById('clearNotificationHistory').addEventListener('click', function() {
+                if (confirm('Are you sure you want to clear the notification history?')) {
+                    // Clear localStorage
+                    localStorage.removeItem('notificationHistory');
+                    // Clear the displayed list
+                    const notificationHistory = document.getElementById('notificationHistory');
+                    notificationHistory.innerHTML = '';
+                    // Disable the button
+                    this.disabled = true;
+                }
+            });
+
+            // Start SignalR connection
+            connection.start()
+                .then(function () {
+                    console.log("SignalR connection established.");
+                })
+                .catch(function (err) {
+                    console.error("Error establishing SignalR connection: " + err.toString());
+                });
+        </script>
 }
 

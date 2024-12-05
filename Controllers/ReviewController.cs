@@ -29,7 +29,20 @@ namespace EbbinghausFlashcardApp.Controllers
         // 12 hours -> 12
         // 1 day -> 24
         // 2 days -> 48, 4 days -> 96, etc all the way to 720 hours (30 days)
-        private int[] intervals = { 0, 1, 6, 12, 24, 48, 96, 168, 360, 720 };
+        private TimeSpan[] intervals = new TimeSpan[]
+        {
+            TimeSpan.Zero,
+            TimeSpan.FromMinutes(20),
+            TimeSpan.FromHours(1),
+            TimeSpan.FromHours(6),
+            TimeSpan.FromHours(12),
+            TimeSpan.FromDays(1),
+            TimeSpan.FromDays(2),
+            TimeSpan.FromDays(4),
+            TimeSpan.FromDays(7),
+            TimeSpan.FromDays(15),
+            TimeSpan.FromDays(30)
+        };
 
         public ReviewController(ApplicationDbContext context, IHubContext<NotificationHub> hubContext)
         {
@@ -86,34 +99,34 @@ namespace EbbinghausFlashcardApp.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> CompleteReview(int flashcardSetId)
         {
-            // avoid sending notification too soon and background service picking it up too soon
-            int bufferMins = 5;
-
             var flashcardSet = await _context.FlashcardSets.FindAsync(flashcardSetId);
             if (flashcardSet == null)
                 return NotFound();
 
-            // for the next review interval
             var currentStage = CalculateReviewStage(flashcardSet.CreatedDate, DateTime.UtcNow);
-            int nextInterval = GetNextInterval(currentStage + 1);
+            var nextInterval = GetNextInterval(currentStage + 1);
 
-            if (nextInterval == 0)
-                flashcardSet.NextReviewDate = DateTime.UtcNow.AddMinutes(20 + bufferMins); // test the app by changing the interval to 1 minute
-            // if the interval has hit the cap of 30 days, reset the progress
-            else if (nextInterval >= 720)
+            if (nextInterval.Equals(intervals.Last()))
             {
-                flashcardSet.NextReviewDate = DateTime.UtcNow.AddMinutes(20 + bufferMins);
-                await _hubContext.Clients.All.SendAsync("ReceiveMessage", "System", $"Flashcard set '{flashcardSet.Name}' has been reset. The review process starts again from the beginning.");
+                // Reset the progress
+                flashcardSet.NextReviewDate = DateTime.UtcNow.Add(intervals[1]); // 20 minutes
+                await _hubContext.Clients.User(flashcardSet.UserId)
+                    .SendAsync("ReceiveMessage", "System", $"Flashcard set '{flashcardSet.Name}' has been reset. The review process starts again from the beginning.");
             }
-            else
-                flashcardSet.NextReviewDate = DateTime.UtcNow.AddHours(nextInterval);
+            else 
+                flashcardSet.NextReviewDate = DateTime.UtcNow.Add(nextInterval);
 
             _context.Update(flashcardSet);
             await _context.SaveChangesAsync();
 
-            await _hubContext.Clients.All.SendAsync("RemoveFlashcardSet", flashcardSetId);
-            await _hubContext.Clients.All.SendAsync("ReceiveMessage", "System", $"User has completed review of flashcard set " +
-                $"'{flashcardSet.Name}'. The next review will be in approximately {nextInterval} hours.");
+            // Format the interval for display
+            string formattedInterval = FormatTimeSpan(nextInterval);
+
+            // Send notifications to the user
+            await _hubContext.Clients.User(flashcardSet.UserId)
+                .SendAsync("RemoveFlashcardSet", flashcardSetId);
+            await _hubContext.Clients.User(flashcardSet.UserId)
+                .SendAsync("ReceiveMessage", "System", $"You have completed review of flashcard set '{flashcardSet.Name}'. The next review will be in approximately {formattedInterval}.");
 
             return RedirectToAction(nameof(FlashcardSetsController.Details), "FlashcardSets", new { id = flashcardSetId });
         }
@@ -122,24 +135,45 @@ namespace EbbinghausFlashcardApp.Controllers
         private int CalculateReviewStage(DateTime createdDate, DateTime currentDate)
         {
             TimeSpan elapsedTime = currentDate - createdDate;
-            // anchor the stage currently in
+
             for (int i = intervals.Length - 1; i >= 0; i--)
             {
-                if(elapsedTime.TotalHours >= intervals[i])
+                if (elapsedTime >= intervals[i])
                     return i;
             }
             return 0;
         }
 
-        private int GetNextInterval(int reviewStage)
+        private TimeSpan GetNextInterval(int reviewStage)
         {
-            return reviewStage < intervals.Length ? intervals[reviewStage] : 720; // the cap is 30 days
+            return reviewStage < intervals.Length ? intervals[reviewStage] : intervals.Last();
         }
 
         // trigger real-time review notification
         private async Task TriggerReviewNotification(int flashcardSetId, string flashcardSetName)
         {
             await _hubContext.Clients.All.SendAsync("AddFlashcardSet", flashcardSetId, flashcardSetName);
+        }
+
+        private string FormatTimeSpan(TimeSpan timeSpan)
+        {
+            if (timeSpan.TotalMinutes < 1)
+                return "less than a minute";
+
+            int days = timeSpan.Days;
+            int hours = timeSpan.Hours;
+            int minutes = timeSpan.Minutes;
+
+            var parts = new List<string>();
+
+            if (days > 0)
+                parts.Add($"{days} day{(days > 1 ? "s" : "")}");
+            if (hours > 0)
+                parts.Add($"{hours} hour{(hours > 1 ? "s" : "")}");
+            if (minutes > 0)
+                parts.Add($"{minutes} minute{(minutes > 1 ? "s" : "")}");
+
+            return string.Join(", ", parts);
         }
     }
 }

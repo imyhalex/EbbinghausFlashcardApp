@@ -41,7 +41,7 @@ namespace EbbinghausFlashcardApp.Services
             using (var scope = _scopeFactory.CreateScope())
             {
                 var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-                TimeSpan gracePeriod = TimeSpan.FromMinutes(1);
+                TimeSpan gracePeriod = TimeSpan.Zero;
                 DateTime cutoffTime = DateTime.UtcNow.Subtract(gracePeriod);
                 var flashcardSets = await context.FlashcardSets
                     .Include(f => f.Flashcards).Where(f => f.NextReviewDate <= cutoffTime).ToListAsync();
