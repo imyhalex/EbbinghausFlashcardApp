@@ -83,6 +83,5 @@ To set up the **Ebbinghaus Flashcard App** locally or in the cloud, follow these
 
 [![Watch the video](https://img.youtube.com/vi/_tNK3j13n6Y/0.jpg)](https://youtu.be/_tNK3j13n6Y)
 
-
-> ___Live Website:___ [Website URL](https://ebbinghausflashcardapp20241204184808.azurewebsites.net/)
+> ___Live Website:___ [Website URL](https://ebbinghausflashcardapp20241204184808.azurewebsites.net/){:target="_blank"}
 
