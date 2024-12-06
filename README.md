@@ -58,7 +58,7 @@ To set up the **Ebbinghaus Flashcard App** locally or in the cloud, follow these
 
 2. **Install Dependencies**
    - Ensure that you have **.NET SDK (version 8.0 or higher)** installed.
-   - Install any required NuGet packages.
+   - Install any required NuGet packages. You can find them in the `EbbinghausFlashcardApp.csproj`.
 
 3. **Configure the Database**
    - Update the `appsettings.json` file with your Azure SQL Database connection string.
