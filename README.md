@@ -80,7 +80,7 @@ To set up the **Ebbinghaus Flashcard App** locally or in the cloud, follow these
    - Ensure that you have set appropriate permissions for managed identity access to the Azure SQL Database.
 
 ## Demo Video & Live Website
-- **Video Demo**: 
+**Video Demo** 
 [![Watch the video](https://img.youtube.com/vi/_tNK3j13n6Y/default.jpg)](https://youtu.be/_tNK3j13n6Y)
 ___Live Website:___ [Website URL](https://ebbinghausflashcardapp20241204184808.azurewebsites.net/)
 
