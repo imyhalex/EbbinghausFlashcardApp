@@ -79,9 +79,7 @@ To set up the **Ebbinghaus Flashcard App** locally or in the cloud, follow these
    - You can publish the app to Azure using **Visual Studio** or the **Azure CLI**.
    - Ensure that you have set appropriate permissions for managed identity access to the Azure SQL Database.
 
-## Demo Video & Live Website
-
-[![Watch the video](https://img.youtube.com/vi/_tNK3j13n6Y/0.jpg)](https://youtu.be/_tNK3j13n6Y)
+## Live Website
 
 > ___Live Website:___ [Website URL](https://ebbinghausflashcardapp20241204184808.azurewebsites.net/)
 
