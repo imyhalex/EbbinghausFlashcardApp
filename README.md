@@ -1,1 +1,2 @@
 # Description
+A cloud-based flashcard application designed to improve learning through spaced repetition, leveraging the principles of the Ebbinghaus Forgetting Curve. This project is developed as part of a cloud computing class, focusing on the integration of real-time notifications, secure user authentication, and scalable cloud technologies.
